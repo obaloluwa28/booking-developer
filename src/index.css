@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Force LTR on content editable areas */
+[contenteditable="true"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: normal !important;
+}
+
+/* Override any RTL that might be applied */
+[contenteditable="true"] * {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* Specific for your editor */
+.rich-text-editor [contenteditable="true"],
+#editor {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
