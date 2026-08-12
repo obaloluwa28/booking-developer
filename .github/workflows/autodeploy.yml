@@ -1,0 +1,114 @@
+name: 🚀 Deploy Developer Portal
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    name: 🔄 Build & Deploy Developer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ATLAS_VPS_SSH_KEY }}
+
+      - name: 🔑 Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.ATLAS_VPS_HOST }} >> ~/.ssh/known_hosts
+          echo "Added server to known hosts"
+
+      - name: 🚀 Sync Developer Files
+        run: |
+          rsync -avz --delete \
+            --exclude='node_modules' \
+            --exclude='.env.local' \
+            --exclude='build' \
+            --exclude='.git' \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./ ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }}:/home/wisefares/projects/internet-booking-engine/developer/
+
+      - name: 🐳 Build Developer Container
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }} << 'EOF'
+            cd /home/wisefares/projects/internet-booking-engine
+            
+            echo "=== BUILDING DEVELOPER CONTAINER ==="
+            
+            # Stop and remove only the developer container
+            echo "1. Stopping existing developer..."
+            docker compose stop developer 2>/dev/null || true
+            docker compose rm -f developer 2>/dev/null || true
+            
+            # Build the container
+            echo "2. Building developer..."
+            timeout 600 docker compose build developer
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Build successful"
+            else
+              echo "❌ Build failed"
+              echo "Build context contents:"
+              ls -la developer/
+              exit 1
+            fi
+          EOF
+
+      - name: 🐳 Start Developer Container
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }} << 'EOF'
+            cd /home/wisefares/projects/internet-booking-engine
+            
+            echo "=== STARTING DEVELOPER CONTAINER ==="
+            
+            # Start the container
+            echo "1. Starting developer..."
+            docker compose up -d developer
+            
+            # Wait and check status
+            echo "2. Waiting for container to initialize..."
+            sleep 10
+            
+            echo "3. Container status:"
+            docker compose ps developer
+            
+            echo "4. Checking if container is running..."
+            if docker compose ps developer --format json 2>/dev/null | grep -q '"State":"running"'; then
+              echo "✅ Container is running"
+            else
+              echo "❌ Container is not running"
+              docker compose ps -a developer
+            fi
+          EOF
+
+      - name: ✅ Final Verification
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }} "
+            cd /home/wisefares/projects/internet-booking-engine
+            
+            echo '=== DEVELOPER FINAL VERIFICATION ==='
+            echo ''
+            
+            echo '1. Developer container details:'
+            docker ps -f name=developer --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            echo ''
+            
+            echo '2. Testing service accessibility...'
+            sleep 5
+            
+            if docker exec developer wget -q --spider http://localhost:3000 2>/dev/null || \
+              docker exec developer curl -s -o /dev/null http://localhost:3000 2>/dev/null; then
+              echo '✅ Developer portal responding internally'
+              echo ''
+              echo '🎉 DEVELOPER DEPLOYMENT SUCCESSFUL!'
+            else
+              echo '⚠️ Cannot verify internal service'
+              docker logs developer --tail 20 2>/dev/null || echo 'No logs available'
+            fi
+          "
