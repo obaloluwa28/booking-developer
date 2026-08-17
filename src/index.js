@@ -5,7 +5,7 @@ import { BrowserRouter } from 'react-router-dom'; // Import BrowserRouter
 import App from './App';
 import './index.css';
 
-const root = ReactDOM.createRoot(document.getElementById('booking-ibe'));
+const root = ReactDOM.createRoot(document.getElementById('developer-booking-ibe')); // Use the correct ID for the root element
 root.render(
   <React.StrictMode>
     <BrowserRouter> {/* Wrap App with BrowserRouter */}
