@@ -32,12 +32,12 @@ jobs:
             --exclude='build' \
             --exclude='.git' \
             -e "ssh -o StrictHostKeyChecking=no" \
-            ./ ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }}:/home/projects/wisefares/developer/
+            ./ ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }}:/home/projects/wisefares/developer/frontend/
 
       - name: 🐳 Build Developer Container
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }} << 'EOF'
-            cd /home/projects/wisefares
+            cd /home/projects/wisefares/developer
             
             echo "=== BUILDING DEVELOPER CONTAINER ==="
             
@@ -63,7 +63,7 @@ jobs:
       - name: 🐳 Start Developer Container
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }} << 'EOF'
-            cd /home/projects/wisefares
+            cd /home/projects/wisefares/developer
             
             echo "=== STARTING DEVELOPER CONTAINER ==="
             
@@ -90,7 +90,7 @@ jobs:
       - name: ✅ Final Verification
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.ATLAS_VPS_USER }}@${{ secrets.ATLAS_VPS_HOST }} "
-            cd /home/projects/wisefares
+            cd /home/projects/wisefares/developer
             
             echo '=== DEVELOPER FINAL VERIFICATION ==='
             echo ''
